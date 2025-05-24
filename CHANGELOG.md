@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
+## [1.2.1](https://github.com/mumu-lhl/dict_reader/compare/v1.2.0..v1.2.1) - 2025-05-24
+
+### Miscellaneous Chores
+
+- **(deps)** update - ([0daa12f](https://github.com/mumu-lhl/dict_reader/commit/0daa12fe6237cc1b6ff6734e1ea5d14a84ca77fa)) - Mumulhl
+
+---
+## [1.2.0](https://github.com/mumu-lhl/dict_reader/compare/v1.1.4..v1.2.0) - 2025-05-24
+
+### Miscellaneous Chores
+
+- **(deps)** bump blockchain_utils from 3.6.0 to 4.0.0 - ([775db17](https://github.com/mumu-lhl/dict_reader/commit/775db17e42e72a9eadbdd74972f41e24cf317291)) - dependabot[bot]
+- **(deps)** bump blockchain_utils from 4.4.0 to 5.0.0 - ([e3515c2](https://github.com/mumu-lhl/dict_reader/commit/e3515c208215b3f7609bda0b21d899b39cdfc11d)) - dependabot[bot]
+
+---
 ## [1.1.4](https://github.com/mumu-lhl/dict_reader/compare/v1.1.3..v1.1.4) - 2024-10-01
 
 ### Bug Fixes
