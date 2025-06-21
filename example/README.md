@@ -11,7 +11,7 @@ void main() async {
   final dictReader = DictReader("MDX FILE PATH");
   await dictReader.init();
 
-  await for (final (keyText, data) in dictReader.read(true)) {
+  await for (final MdxRecord(:keyText, :data) in dictReader.readWithMdxData()) {
     print("$keyText, $data");
   }
 }
@@ -26,13 +26,13 @@ void main() async {
   final dictReader = DictReader("MDX FILE PATH");
   await dictReader.init();
 
-  final map = <String, (int, int, int, int)>{};
-  await for (final (keyText, offset) in dictReader.read()) {
-    map[keyText] = offset;
+  final map = <String, RecordOffsetInfo>{};
+  await for (final offsetInfo in dictReader.readWithOffset()) {
+    map[offsetInfo.keyText] = offsetInfo;
   }
 
-  final offset = map["go"];
-  print(await dictReader.readOne(offset!.$1, offset.$2, offset.$3, offset.$4));
+  final offsetInfo = map["go"];
+  print(await dictReader.readOneMdx(offsetInfo!));
 }
 ```
 
@@ -50,7 +50,7 @@ void main() async {
   // Pass false to reduce initialization time
   await dictReader.init(false);
 
-  final offset = map["go"];
-  print(await dictReader.readOne(offset!.$1, offset.$2, offset.$3, offset.$4));
+  final offsetInfo = map["go"];
+  print(await dictReader.readOneMdx(offsetInfo!));
 }
 ```
