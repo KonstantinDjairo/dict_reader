@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
+## [1.3.0](https://github.com/mumu-lhl/dict_reader/compare/v1.2.1..v1.3.0) - 2025-06-21
+
+### Bug Fixes
+
+- **(type annotation)** fix type - ([da2e0bf](https://github.com/mumu-lhl/dict_reader/commit/da2e0bfac0334d118631bd97a4180d9fd8dfb65d)) - Mumulhl
+
+### Documentation
+
+- **(example)** update example - ([ae81bbd](https://github.com/mumu-lhl/dict_reader/commit/ae81bbd5a19424cab89e8734d5e960016a7f44aa)) - Mumulhl
+
+### Refactoring
+
+- better type annotation - ([a20ed3d](https://github.com/mumu-lhl/dict_reader/commit/a20ed3d88e9e0516b81b782759b9b7edd3fde6dc)) - Mumulhl
+- refactor read() - ([9e16183](https://github.com/mumu-lhl/dict_reader/commit/9e161837278c043b08db77032f3391514ce582ea)) - Mumulhl
+- better use - ([49c98ae](https://github.com/mumu-lhl/dict_reader/commit/49c98ae58e4b7143fcbcdf5d278a1bb41f88ec57)) - Mumulhl
+
+---
 ## [1.2.1](https://github.com/mumu-lhl/dict_reader/compare/v1.2.0..v1.2.1) - 2025-05-24
 
 ### Miscellaneous Chores
