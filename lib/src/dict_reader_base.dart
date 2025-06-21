@@ -158,200 +158,6 @@ class DictReader {
     await f.close();
   }
 
-  Stream<(String, (int, int, int, int))> readWithOffset() async* {
-    RandomAccessFile f = await _dict.open();
-    await f.setPosition(_recordBlockOffset);
-
-    final numRecordBlocks = await _readNumberer(f);
-    // number of entries
-    await _readNumberer(f);
-
-    // size of record block info
-    await _readNumberer(f);
-    // size of record block
-    await _readNumberer(f);
-
-    // record block info section
-    final List<int> recordBlockLnfoList = [];
-
-    for (var i = 0; i < numRecordBlocks; i++) {
-      final compressedSize = await _readNumberer(f);
-      // record block decompressed size
-      await _readNumberer(f);
-
-      recordBlockLnfoList.add(compressedSize);
-    }
-
-    // actual record block
-    var offset = 0;
-    var i = 0;
-    var recordBlockOffset = await f.position();
-
-    for (final compressedSize in recordBlockLnfoList) {
-      final recordBlock = _decodeBlock(await f.read(compressedSize));
-
-      // split record block according to the offset info from key block
-      while (i < _keyList.length) {
-        final (recordStart, keyText) = _keyList[i];
-
-        // reach the end of current record block
-        if (recordStart - offset >= recordBlock.length) {
-          break;
-        }
-
-        // record end index
-        int recordEnd;
-
-        if (i < _keyList.length - 1) {
-          recordEnd = _keyList[i + 1].$1;
-        } else {
-          recordEnd = recordBlock.length + offset;
-        }
-
-        i += 1;
-
-        final startOffset = recordStart - offset;
-        final endOffset = recordEnd - offset;
-        yield (
-          keyText,
-          (recordBlockOffset, startOffset, endOffset, compressedSize)
-        );
-      }
-
-      offset += recordBlock.length;
-      recordBlockOffset += compressedSize;
-    }
-
-    await f.close();
-  }
-
-  Stream<(String, String)> readWithMdxData() async* {
-    RandomAccessFile f = await _dict.open();
-    await f.setPosition(_recordBlockOffset);
-
-    final numRecordBlocks = await _readNumberer(f);
-    // number of entries
-    await _readNumberer(f);
-
-    // size of record block info
-    await _readNumberer(f);
-    // size of record block
-    await _readNumberer(f);
-
-    // record block info section
-    final List<int> recordBlockLnfoList = [];
-
-    for (var i = 0; i < numRecordBlocks; i++) {
-      final compressedSize = await _readNumberer(f);
-      // record block decompressed size
-      await _readNumberer(f);
-
-      recordBlockLnfoList.add(compressedSize);
-    }
-
-    // actual record block
-    var offset = 0;
-    var i = 0;
-
-    for (final compressedSize in recordBlockLnfoList) {
-      final recordBlock = _decodeBlock(await f.read(compressedSize));
-
-      // split record block according to the offset info from key block
-      while (i < _keyList.length) {
-        final (recordStart, keyText) = _keyList[i];
-
-        // reach the end of current record block
-        if (recordStart - offset >= recordBlock.length) {
-          break;
-        }
-
-        // record end index
-        int recordEnd;
-
-        if (i < _keyList.length - 1) {
-          recordEnd = _keyList[i + 1].$1;
-        } else {
-          recordEnd = recordBlock.length + offset;
-        }
-
-        i += 1;
-
-        final originalData =
-            recordBlock.sublist(recordStart - offset, recordEnd - offset);
-        final data = _treatRecordMdxData(originalData);
-
-        yield (keyText, data);
-      }
-
-      offset += recordBlock.length;
-    }
-
-    await f.close();
-  }
-
-  Stream<(String, List<int>)> readWithMddData() async* {
-    RandomAccessFile f = await _dict.open();
-    await f.setPosition(_recordBlockOffset);
-
-    final numRecordBlocks = await _readNumberer(f);
-    // number of entries
-    await _readNumberer(f);
-
-    // size of record block info
-    await _readNumberer(f);
-    // size of record block
-    await _readNumberer(f);
-
-    // record block info section
-    final List<int> recordBlockLnfoList = [];
-
-    for (var i = 0; i < numRecordBlocks; i++) {
-      final compressedSize = await _readNumberer(f);
-      // record block decompressed size
-      await _readNumberer(f);
-
-      recordBlockLnfoList.add(compressedSize);
-    }
-
-    // actual record block
-    var offset = 0;
-    var i = 0;
-
-    for (final compressedSize in recordBlockLnfoList) {
-      final recordBlock = _decodeBlock(await f.read(compressedSize));
-
-      // split record block according to the offset info from key block
-      while (i < _keyList.length) {
-        final (recordStart, keyText) = _keyList[i];
-
-        // reach the end of current record block
-        if (recordStart - offset >= recordBlock.length) {
-          break;
-        }
-
-        // record end index
-        int recordEnd;
-
-        if (i < _keyList.length - 1) {
-          recordEnd = _keyList[i + 1].$1;
-        } else {
-          recordEnd = recordBlock.length + offset;
-        }
-
-        i += 1;
-
-        final data =
-            recordBlock.sublist(recordStart - offset, recordEnd - offset);
-
-        yield (keyText, data);
-      }
-
-      offset += recordBlock.length;
-    }
-
-    await f.close();
-  }
-
   /// Only reads one record.
   ///
   /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
@@ -372,40 +178,75 @@ class DictReader {
     return data;
   }
 
-  /// Only reads a mdx file's one record.
+  /// Only reads a mdd file's one record.
   ///
-  /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
-  /// Returns `String` if file format is mdx.
-  /// Returns `List<int>` if file format is mdd.
-  Future<String> readOneMdx(
-      int offset, int startOffset, int endOffset, int compressedSize) async {
+  /// [recordOffsetInfo] is obtained from [readWithOffset].
+  /// Returns `List<int>`.
+  Future<List<int>> readOneMdd(RecordOffsetInfo recordOffsetInfo) async {
     RandomAccessFile f = await _dict.open();
-    await f.setPosition(offset);
+    await f.setPosition(recordOffsetInfo.recordBlockOffset);
 
-    final recordBlock = _decodeBlock(await f.read(compressedSize));
-    final data =
-        _treatRecordMdxData(recordBlock.sublist(startOffset, endOffset));
+    final recordBlock =
+        _decodeBlock(await f.read(recordOffsetInfo.compressedSize));
+    final data = recordBlock.sublist(
+        recordOffsetInfo.startOffset, recordOffsetInfo.endOffset);
 
     await f.close();
 
     return data;
   }
 
-  /// Only reads a mdd file's one record.
+  /// Only reads a mdx file's one record.
   ///
-  /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
-  /// Returns `List<int>`.
-  Future<List<int>> readOneMdd(
-      int offset, int startOffset, int endOffset, int compressedSize) async {
+  /// [recordOffsetInfo] is obtained from [readWithOffset].
+  /// Returns `String` if file format is mdx.
+  /// Returns `List<int>` if file format is mdd.
+  Future<String> readOneMdx(RecordOffsetInfo recordOffsetInfo) async {
     RandomAccessFile f = await _dict.open();
-    await f.setPosition(offset);
+    await f.setPosition(recordOffsetInfo.recordBlockOffset);
 
-    final recordBlock = _decodeBlock(await f.read(compressedSize));
-    final data = recordBlock.sublist(startOffset, endOffset);
+    final recordBlock =
+        _decodeBlock(await f.read(recordOffsetInfo.compressedSize));
+    final data = _treatRecordMdxData(recordBlock.sublist(
+        recordOffsetInfo.startOffset, recordOffsetInfo.endOffset));
 
     await f.close();
 
     return data;
+  }
+
+  /// Reads records from an MDD file and returns a stream of [MddRecord] objects.
+  ///
+  /// Each [MddRecord] contains the key text and the raw MDD data (`List<int>`).
+  Stream<MddRecord> readWithMddData() async* {
+    yield* _readRecords((keyText, originalData, recordBlockOffset, startOffset,
+        endOffset, compressedSize) {
+      return MddRecord(keyText, originalData);
+    });
+  }
+
+  /// Reads records from an MDX file and returns a stream of [MdxRecord] objects.
+  ///
+  /// Each [MdxRecord] contains the key text and the processed MDX data.
+  Stream<MdxRecord> readWithMdxData() async* {
+    yield* _readRecords((keyText, originalData, recordBlockOffset, startOffset,
+        endOffset, compressedSize) {
+      final data = _treatRecordMdxData(originalData);
+      return MdxRecord(keyText, data);
+    });
+  }
+
+  /// Reads records and returns a stream of [RecordOffsetInfo] object.
+  ///
+  /// The `RecordOffsetInfo` contains the `recordBlockOffset`, `startOffset`,
+  /// `endOffset`, and `compressedSize` which can be used to read the record data
+  /// later using [readOneMdx] or [readOneMdd].
+  Stream<RecordOffsetInfo> readWithOffset() async* {
+    yield* _readRecords((keyText, originalData, recordBlockOffset, startOffset,
+        endOffset, compressedSize) {
+      return (RecordOffsetInfo(
+          keyText, recordBlockOffset, startOffset, endOffset, compressedSize));
+    });
   }
 
   List<int> _decodeBlock(List<int> block) {
@@ -658,6 +499,76 @@ class DictReader {
     }
   }
 
+  Stream<T> _readRecords<T>(
+      T Function(String keyText, List<int> originalData, int recordBlockOffset,
+              int startOffset, int endOffset, int compressedSize)
+          recordProcessor) async* {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    // number of entries
+    await _readNumberer(f);
+
+    // size of record block info
+    await _readNumberer(f);
+    // size of record block
+    await _readNumberer(f);
+
+    // record block info section
+    final List<int> recordBlockLnfoList = [];
+
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      // record block decompressed size
+      await _readNumberer(f);
+
+      recordBlockLnfoList.add(compressedSize);
+    }
+
+    // actual record block
+    var offset = 0;
+    var i = 0;
+    var recordBlockOffset = await f.position();
+
+    for (final compressedSize in recordBlockLnfoList) {
+      final recordBlock = _decodeBlock(await f.read(compressedSize));
+
+      // split record block according to the offset info from key block
+      while (i < _keyList.length) {
+        final (recordStart, keyText) = _keyList[i];
+
+        // reach the end of current record block
+        if (recordStart - offset >= recordBlock.length) {
+          break;
+        }
+
+        // record end index
+        int recordEnd;
+
+        if (i < _keyList.length - 1) {
+          recordEnd = _keyList[i + 1].$1;
+        } else {
+          recordEnd = recordBlock.length + offset;
+        }
+
+        i += 1;
+
+        final startOffset = recordStart - offset;
+        final endOffset = recordEnd - offset;
+        final originalData = recordBlock.sublist(startOffset, endOffset);
+
+        yield recordProcessor(keyText, originalData, recordBlockOffset,
+            startOffset, endOffset, compressedSize);
+      }
+
+      offset += recordBlock.length;
+      recordBlockOffset += compressedSize;
+    }
+
+    await f.close();
+  }
+
   List<(int, String)> _splitKeyBlock(List<int> keyBlock) {
     final List<(int, String)> keyList = [];
 
@@ -750,4 +661,60 @@ class DictReader {
 
     return dataReturned;
   }
+}
+
+/// Represents a record from an MDD file.
+///
+/// An MDD record typically contains a key (the word or phrase) and its
+/// associated raw binary data.
+class MddRecord {
+  /// The key text associated with the record.
+  final String keyText;
+
+  /// The raw binary data of the record.
+  final List<int> data;
+
+  /// Creates a new [MddRecord] instance.
+  const MddRecord(this.keyText, this.data);
+}
+
+/// Represents a record from an MDX file.
+///
+/// An MDX record typically contains a key (the word or phrase) and its
+/// associated textual data (e.g., definition, explanation).
+class MdxRecord {
+  /// The key text associated with the record.
+  final String keyText;
+
+  /// The textual data of the record.
+  final String data;
+
+  /// Creates a new [MdxRecord] instance.
+  const MdxRecord(this.keyText, this.data);
+}
+
+/// Represents offset information for a record within a dictionary file.
+///
+/// This class provides details necessary to locate and decompress a specific
+/// record's data from the dictionary file, without needing to load the entire
+/// record block into memory.
+class RecordOffsetInfo {
+  /// The key text associated with the record.
+  final String keyText;
+
+  /// The byte offset of the record block within the dictionary file.
+  final int recordBlockOffset;
+
+  /// The starting offset of the record's data within its decompressed record block.
+  final int startOffset;
+
+  /// The ending offset of the record's data within its decompressed record block.
+  final int endOffset;
+
+  /// The compressed size of the record block containing this record.
+  final int compressedSize;
+
+  /// Creates a new [RecordOffsetInfo] instance.
+  const RecordOffsetInfo(this.keyText, this.recordBlockOffset, this.startOffset,
+      this.endOffset, this.compressedSize);
 }
