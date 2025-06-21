@@ -158,6 +158,200 @@ class DictReader {
     await f.close();
   }
 
+  Stream<(String, (int, int, int, int))> readWithOffset() async* {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    // number of entries
+    await _readNumberer(f);
+
+    // size of record block info
+    await _readNumberer(f);
+    // size of record block
+    await _readNumberer(f);
+
+    // record block info section
+    final List<int> recordBlockLnfoList = [];
+
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      // record block decompressed size
+      await _readNumberer(f);
+
+      recordBlockLnfoList.add(compressedSize);
+    }
+
+    // actual record block
+    var offset = 0;
+    var i = 0;
+    var recordBlockOffset = await f.position();
+
+    for (final compressedSize in recordBlockLnfoList) {
+      final recordBlock = _decodeBlock(await f.read(compressedSize));
+
+      // split record block according to the offset info from key block
+      while (i < _keyList.length) {
+        final (recordStart, keyText) = _keyList[i];
+
+        // reach the end of current record block
+        if (recordStart - offset >= recordBlock.length) {
+          break;
+        }
+
+        // record end index
+        int recordEnd;
+
+        if (i < _keyList.length - 1) {
+          recordEnd = _keyList[i + 1].$1;
+        } else {
+          recordEnd = recordBlock.length + offset;
+        }
+
+        i += 1;
+
+        final startOffset = recordStart - offset;
+        final endOffset = recordEnd - offset;
+        yield (
+          keyText,
+          (recordBlockOffset, startOffset, endOffset, compressedSize)
+        );
+      }
+
+      offset += recordBlock.length;
+      recordBlockOffset += compressedSize;
+    }
+
+    await f.close();
+  }
+
+  Stream<(String, String)> readWithMdxData() async* {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    // number of entries
+    await _readNumberer(f);
+
+    // size of record block info
+    await _readNumberer(f);
+    // size of record block
+    await _readNumberer(f);
+
+    // record block info section
+    final List<int> recordBlockLnfoList = [];
+
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      // record block decompressed size
+      await _readNumberer(f);
+
+      recordBlockLnfoList.add(compressedSize);
+    }
+
+    // actual record block
+    var offset = 0;
+    var i = 0;
+
+    for (final compressedSize in recordBlockLnfoList) {
+      final recordBlock = _decodeBlock(await f.read(compressedSize));
+
+      // split record block according to the offset info from key block
+      while (i < _keyList.length) {
+        final (recordStart, keyText) = _keyList[i];
+
+        // reach the end of current record block
+        if (recordStart - offset >= recordBlock.length) {
+          break;
+        }
+
+        // record end index
+        int recordEnd;
+
+        if (i < _keyList.length - 1) {
+          recordEnd = _keyList[i + 1].$1;
+        } else {
+          recordEnd = recordBlock.length + offset;
+        }
+
+        i += 1;
+
+        final originalData =
+            recordBlock.sublist(recordStart - offset, recordEnd - offset);
+        final data = _treatRecordMdxData(originalData);
+
+        yield (keyText, data);
+      }
+
+      offset += recordBlock.length;
+    }
+
+    await f.close();
+  }
+
+  Stream<(String, List<int>)> readWithMddData() async* {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    // number of entries
+    await _readNumberer(f);
+
+    // size of record block info
+    await _readNumberer(f);
+    // size of record block
+    await _readNumberer(f);
+
+    // record block info section
+    final List<int> recordBlockLnfoList = [];
+
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      // record block decompressed size
+      await _readNumberer(f);
+
+      recordBlockLnfoList.add(compressedSize);
+    }
+
+    // actual record block
+    var offset = 0;
+    var i = 0;
+
+    for (final compressedSize in recordBlockLnfoList) {
+      final recordBlock = _decodeBlock(await f.read(compressedSize));
+
+      // split record block according to the offset info from key block
+      while (i < _keyList.length) {
+        final (recordStart, keyText) = _keyList[i];
+
+        // reach the end of current record block
+        if (recordStart - offset >= recordBlock.length) {
+          break;
+        }
+
+        // record end index
+        int recordEnd;
+
+        if (i < _keyList.length - 1) {
+          recordEnd = _keyList[i + 1].$1;
+        } else {
+          recordEnd = recordBlock.length + offset;
+        }
+
+        i += 1;
+
+        final data =
+            recordBlock.sublist(recordStart - offset, recordEnd - offset);
+
+        yield (keyText, data);
+      }
+
+      offset += recordBlock.length;
+    }
+
+    await f.close();
+  }
+
   /// Only reads one record.
   ///
   /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
