@@ -65,7 +65,7 @@ class DictReader {
   /// Initialize
   ///
   /// Will not read key if [readKey] is false to reduce initialization time.
-  void init([bool readKey = true]) async {
+  Future<void> init([bool readKey = true]) async {
     _dict = File(_path);
     header = await _readHeader();
     if (readKey) _keyList = await _readKeys();
