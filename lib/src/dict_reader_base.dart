@@ -65,7 +65,7 @@ class DictReader {
   /// Initialize
   ///
   /// Will not read key if [readKey] is false to reduce initialization time.
-  init([bool readKey = true]) async {
+  void init([bool readKey = true]) async {
     _dict = File(_path);
     header = await _readHeader();
     if (readKey) _keyList = await _readKeys();
@@ -75,13 +75,14 @@ class DictReader {
   ///
   /// If [returnData] is false.
   /// Returns `Stream<(String, (int, int, int, int))>`.
-  /// `(int, int, int, int)` can be passed to [readOne] in turn.
+  /// `(int, int, int, int)` can be passed to [readOneMdx] or [readOneMdd] in turn.
   ///
   /// If [returnData] is true.
   /// Returns `Stream<(String, String)` when file format is mdx.
   /// Returns `Stream<(String, List<int>)` when file format is mdd.
   ///
   /// The first member of the returned record is the key text.
+  @Deprecated("")
   Stream<(String, dynamic)> read([bool returnData = false]) async* {
     RandomAccessFile f = await _dict.open();
     await f.setPosition(_recordBlockOffset);
@@ -135,8 +136,9 @@ class DictReader {
         i += 1;
 
         if (returnData) {
-          final data = _treatRecordData(
-              recordBlock.sublist(recordStart - offset, recordEnd - offset));
+          final originalData =
+              recordBlock.sublist(recordStart - offset, recordEnd - offset);
+          final data = _mdx ? _treatRecordMdxData(originalData) : originalData;
 
           yield (keyText, data);
         } else {
@@ -159,15 +161,53 @@ class DictReader {
   /// Only reads one record.
   ///
   /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
-  /// Returns String if file format is mdx.
-  /// Returns List<int> if file format is mdd.
+  /// Returns `String` if file format is mdx.
+  /// Returns `List<int>` if file format is mdd.
+  @Deprecated("Use readOneMdx or readOneMdd instead.")
   dynamic readOne(
       int offset, int startOffset, int endOffset, int compressedSize) async {
     RandomAccessFile f = await _dict.open();
     await f.setPosition(offset);
 
     final recordBlock = _decodeBlock(await f.read(compressedSize));
-    final data = _treatRecordData(recordBlock.sublist(startOffset, endOffset));
+    final originalData = recordBlock.sublist(startOffset, endOffset);
+    final data = _mdx ? _treatRecordMdxData(originalData) : originalData;
+
+    await f.close();
+
+    return data;
+  }
+
+  /// Only reads a mdx file's one record.
+  ///
+  /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
+  /// Returns `String` if file format is mdx.
+  /// Returns `List<int>` if file format is mdd.
+  Future<String> readOneMdx(
+      int offset, int startOffset, int endOffset, int compressedSize) async {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(offset);
+
+    final recordBlock = _decodeBlock(await f.read(compressedSize));
+    final data =
+        _treatRecordMdxData(recordBlock.sublist(startOffset, endOffset));
+
+    await f.close();
+
+    return data;
+  }
+
+  /// Only reads a mdd file's one record.
+  ///
+  /// [offset], [startOffset], [endOffset], [compressedSize] are obtained from [read].
+  /// Returns `List<int>`.
+  Future<List<int>> readOneMdd(
+      int offset, int startOffset, int endOffset, int compressedSize) async {
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(offset);
+
+    final recordBlock = _decodeBlock(await f.read(compressedSize));
+    final data = recordBlock.sublist(startOffset, endOffset);
 
     await f.close();
 
@@ -501,21 +541,17 @@ class DictReader {
     return txtStyled;
   }
 
-  dynamic _treatRecordData(List<int> data) {
-    dynamic dataReturned;
+  String _treatRecordMdxData(List<int> data) {
+    String dataReturned;
 
-    if (_mdx) {
-      if (_encoding == "UTF-16") {
-        dataReturned = Utf16Decoder().decodeUtf16Le(data);
-      } else {
-        dataReturned = utf8.decode(data);
-      }
-
-      if (_stylesheet.isNotEmpty) {
-        dataReturned = _substituteStylesheet(dataReturned);
-      }
+    if (_encoding == "UTF-16") {
+      dataReturned = Utf16Decoder().decodeUtf16Le(data);
     } else {
-      dataReturned = data;
+      dataReturned = utf8.decode(data);
+    }
+
+    if (_stylesheet.isNotEmpty) {
+      dataReturned = _substituteStylesheet(dataReturned);
     }
 
     return dataReturned;
