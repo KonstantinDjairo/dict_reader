@@ -7,3 +7,7 @@
 pubspec.lock
 
 doc/
+
+mdict-analysis
+mdx/
+example/main.dart
