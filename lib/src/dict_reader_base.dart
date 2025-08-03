@@ -249,6 +249,67 @@ class DictReader {
     });
   }
 
+  /// Locates the position information of a key (word).
+  ///
+  /// This method can be used to get the content of a key after initialization.
+  /// Returns `null` if the key is not found.
+  Future<RecordOffsetInfo?> locate(String key) async {
+    final keyIndex = _keyList.indexWhere((element) => element.$2 == key);
+
+    if (keyIndex == -1) {
+      return null;
+    }
+
+    final recordStart = _keyList[keyIndex].$1;
+    final recordEnd = (keyIndex < _keyList.length - 1)
+        ? _keyList[keyIndex + 1].$1
+        : -1; // -1 indicates the last record
+
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    await _readNumberer(f); // number of entries
+    await _readNumberer(f); // size of record block info
+    await _readNumberer(f); // size of record block
+
+    // Read record block info section
+    final List<(int, int)> recordBlockInfoList = [];
+    int totalDecompressedSize = 0;
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      final decompressedSize = await _readNumberer(f);
+      recordBlockInfoList.add((compressedSize, decompressedSize));
+      totalDecompressedSize += decompressedSize;
+    }
+
+    final actualRecordEnd =
+        (recordEnd == -1) ? totalDecompressedSize : recordEnd;
+
+    // Locate the correct block
+    int accumulatedDecompressedSize = 0;
+    var recordBlockFileOffset = await f.position();
+
+    for (final blockInfo in recordBlockInfoList) {
+      final compressedSize = blockInfo.$1;
+      final decompressedSize = blockInfo.$2;
+
+      if (recordStart < accumulatedDecompressedSize + decompressedSize) {
+        final startOffset = recordStart - accumulatedDecompressedSize;
+        final endOffset = actualRecordEnd - accumulatedDecompressedSize;
+        await f.close();
+        return RecordOffsetInfo(
+            key, recordBlockFileOffset, startOffset, endOffset, compressedSize);
+      }
+
+      accumulatedDecompressedSize += decompressedSize;
+      recordBlockFileOffset += compressedSize;
+    }
+
+    await f.close();
+    return null; // Should not happen if key is in _keyList
+  }
+
   List<int> _decodeBlock(List<int> block) {
     final byteBuffer =
         ByteData.view(Uint8List.fromList(block).sublist(0, 4).buffer);
