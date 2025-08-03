@@ -255,9 +255,10 @@ class DictReader {
   /// This method can be used to get the content of a key after initialization.
   /// Returns `null` if the key is not found.
   Future<RecordOffsetInfo?> locate(String key) async {
-    final keyIndex = _keyList.indexWhere((element) => element.$2 == key);
+    final keyIndex = binarySearch(_keyList, (0, key),
+        compare: (a, b) => a.$2.compareTo(b.$2));
 
-    if (keyIndex == -1) {
+    if (keyIndex < 0) {
       return null;
     }
 
