@@ -4,6 +4,7 @@ import "dart:typed_data";
 
 import "package:blockchain_utils/crypto/crypto/hash/hash.dart";
 import "package:charset/charset.dart";
+import "package:collection/collection.dart";
 
 Uint8List _fastDecrypt(Uint8List data, Uint8List key) {
   // XOR decryption
@@ -314,77 +315,51 @@ class DictReader {
   ///
   /// This method can be used to get the content of a key after initialization.
   /// Returns an empty list if the key is not found.
-  Future<List<RecordOffsetInfo>> search(String key, {int? limit}) async {
-    var matchedKeys = _keyList.where((element) => element.$2.startsWith(key));
+  List<String> search(String key, {int? limit}) {
+    // Use binary search to find the first potential match.
+    final startIndex = binarySearch(_keyList, (0, key), compare: (a, b) {
+      return a.$2.compareTo(b.$2);
+    });
 
-    if (limit != null) {
-      matchedKeys = matchedKeys.take(limit);
+    if (startIndex < 0) {
+      // If binarySearch returns a negative value, it's the bitwise complement
+      // of the insertion point. This is where the search can start.
+      final insertionPoint = ~startIndex;
+      if (insertionPoint >= _keyList.length ||
+          !_keyList[insertionPoint].$2.startsWith(key)) {
+        return [];
+      }
+      return _collectMatches(_keyList, key, insertionPoint, limit);
     }
 
-    final matchedKeysList = matchedKeys.toList();
-
-    if (matchedKeysList.isEmpty) {
-      return [];
+    // binarySearch might land in the middle of a range of matches.
+    // We need to find the first actual match.
+    var firstMatchIndex = startIndex;
+    while (firstMatchIndex > 0 &&
+        _keyList[firstMatchIndex - 1].$2.startsWith(key)) {
+      firstMatchIndex--;
     }
 
-    RandomAccessFile f = await _dict.open();
-    await f.setPosition(_recordBlockOffset);
+    return _collectMatches(_keyList, key, firstMatchIndex, limit);
+  }
 
-    final numRecordBlocks = await _readNumberer(f);
-    await _readNumberer(f); // number of entries
-    await _readNumberer(f); // size of record block info
-    await _readNumberer(f); // size of record block
-
-    // Read record block info section
-    final List<(int, int)> recordBlockInfoList = [];
-    int totalDecompressedSize = 0;
-    for (var i = 0; i < numRecordBlocks; i++) {
-      final compressedSize = await _readNumberer(f);
-      final decompressedSize = await _readNumberer(f);
-      recordBlockInfoList.add((compressedSize, decompressedSize));
-      totalDecompressedSize += decompressedSize;
-    }
-
-    final recordBlockFileOffset = await f.position();
-    await f.close();
-
-    final List<RecordOffsetInfo> results = [];
-    for (final matchedKey in matchedKeysList) {
-      final keyIndex = _keyList.indexOf(matchedKey);
-      final recordStart = matchedKey.$1;
-      final recordEnd = (keyIndex < _keyList.length - 1)
-          ? _keyList[keyIndex + 1].$1
-          : -1; // -1 indicates the last record
-
-      final actualRecordEnd =
-          (recordEnd == -1) ? totalDecompressedSize : recordEnd;
-
-      // Locate the correct block
-      int accumulatedDecompressedSize = 0;
-      var currentRecordBlockFileOffset = recordBlockFileOffset;
-
-      for (final blockInfo in recordBlockInfoList) {
-        final compressedSize = blockInfo.$1;
-        final decompressedSize = blockInfo.$2;
-
-        if (recordStart < accumulatedDecompressedSize + decompressedSize) {
-          final startOffset = recordStart - accumulatedDecompressedSize;
-          final endOffset = actualRecordEnd - accumulatedDecompressedSize;
-          results.add(RecordOffsetInfo(
-              matchedKey.$2,
-              currentRecordBlockFileOffset,
-              startOffset,
-              endOffset,
-              compressedSize));
-          break;
-        }
-
-        accumulatedDecompressedSize += decompressedSize;
-        currentRecordBlockFileOffset += compressedSize;
+  /// Collects all matching keys starting from a given index.
+  List<String> _collectMatches(
+      List<(int, String)> list, String key, int startIndex, int? limit) {
+    final matchedKeys = <String>[];
+    for (var i = startIndex; i < list.length; i++) {
+      if (limit != null && matchedKeys.length >= limit) {
+        break;
+      }
+      final currentKey = list[i].$2;
+      if (currentKey.startsWith(key)) {
+        matchedKeys.add(currentKey);
+      } else {
+        // Since the list is sorted, we can stop as soon as we find a non-match.
+        break;
       }
     }
-
-    return results;
+    return matchedKeys;
   }
 
   List<int> _decodeBlock(List<int> block) {
