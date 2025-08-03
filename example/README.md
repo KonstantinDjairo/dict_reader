@@ -54,3 +54,34 @@ void main() async {
   print(await dictReader.readOneMdx(offsetInfo!));
 }
 ```
+
+## Locate
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final offsetInfo = await dictReader.locate("go");
+  print(await dictReader.readOneMdx(offsetInfo!));
+}
+```
+
+## Search
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final keys = dictReader.search("go");
+  print(keys);
+
+  final keysWithLimit = dictReader.search("go", limit: 1);
+  print(keysWithLimit);
+}
+```
