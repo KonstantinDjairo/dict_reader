@@ -329,7 +329,6 @@ class DictReader {
       }
     });
 
-
     if (startIndex < 0) {
       return [];
     }
