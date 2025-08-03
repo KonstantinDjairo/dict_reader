@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
+## [1.4.0](https://github.com/mumu-lhl/dict_reader/compare/v1.3.0..v1.4.0) - 2025-08-03
+
+### Features
+
+- **(locate)** Binary search for locate() - ([55c634a](https://github.com/mumu-lhl/dict_reader/commit/55c634a8)) - Mumulhl
+- **(search)** Binary search for search() - ([466dbdb](https://github.com/mumu-lhl/dict_reader/commit/466dbdb9)) - Mumulhl
+- **(search)** Add search() - ([2eca3c1](https://github.com/mumu-lhl/dict_reader/commit/2eca3c18)) - Mumulhl
+- **(locate)** Add locate() - ([67d345d](https://github.com/mumu-lhl/dict_reader/commit/67d345db)) - Mumulhl
+
+### Documentation
+
+- **(example)** Update examples - ([17260ec](https://github.com/mumu-lhl/dict_reader/commit/17260ecd)) - Mumulhl
+
+---
 ## [1.3.0](https://github.com/mumu-lhl/dict_reader/compare/v1.2.1..v1.3.0) - 2025-06-21
 
 ### Bug Fixes
