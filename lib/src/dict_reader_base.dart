@@ -319,18 +319,20 @@ class DictReader {
   List<String> search(String key, {int? limit}) {
     // Use binary search to find the first potential match.
     final startIndex = binarySearch(_keyList, (0, key), compare: (a, b) {
-      return a.$2.compareTo(b.$2);
+      print("Comparing ${a.$2} with ${b.$2} (${a.$2.compareTo(key)})");
+      final comparedResult = a.$2.compareTo(b.$2);
+      if (comparedResult == 0) {
+        return 0;
+      } else if (a.$2.startsWith(key)) {
+        return 0;
+      } else {
+        return comparedResult;
+      }
     });
 
+
     if (startIndex < 0) {
-      // If binarySearch returns a negative value, it's the bitwise complement
-      // of the insertion point. This is where the search can start.
-      final insertionPoint = ~startIndex;
-      if (insertionPoint >= _keyList.length ||
-          !_keyList[insertionPoint].$2.startsWith(key)) {
-        return [];
-      }
-      return _collectMatches(_keyList, key, insertionPoint, limit);
+      return [];
     }
 
     // binarySearch might land in the middle of a range of matches.
