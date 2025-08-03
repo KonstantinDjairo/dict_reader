@@ -319,7 +319,6 @@ class DictReader {
   List<String> search(String key, {int? limit}) {
     // Use binary search to find the first potential match.
     final startIndex = binarySearch(_keyList, (0, key), compare: (a, b) {
-      print("Comparing ${a.$2} with ${b.$2} (${a.$2.compareTo(key)})");
       final comparedResult = a.$2.compareTo(b.$2);
       if (comparedResult == 0) {
         return 0;
