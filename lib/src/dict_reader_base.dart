@@ -310,6 +310,83 @@ class DictReader {
     return null; // Should not happen if key is in _keyList
   }
 
+  /// Searches for keys containing the given text.
+  ///
+  /// This method can be used to get the content of a key after initialization.
+  /// Returns an empty list if the key is not found.
+  Future<List<RecordOffsetInfo>> search(String key, {int? limit}) async {
+    var matchedKeys = _keyList.where((element) => element.$2.startsWith(key));
+
+    if (limit != null) {
+      matchedKeys = matchedKeys.take(limit);
+    }
+
+    final matchedKeysList = matchedKeys.toList();
+
+    if (matchedKeysList.isEmpty) {
+      return [];
+    }
+
+    RandomAccessFile f = await _dict.open();
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    await _readNumberer(f); // number of entries
+    await _readNumberer(f); // size of record block info
+    await _readNumberer(f); // size of record block
+
+    // Read record block info section
+    final List<(int, int)> recordBlockInfoList = [];
+    int totalDecompressedSize = 0;
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      final decompressedSize = await _readNumberer(f);
+      recordBlockInfoList.add((compressedSize, decompressedSize));
+      totalDecompressedSize += decompressedSize;
+    }
+
+    final recordBlockFileOffset = await f.position();
+    await f.close();
+
+    final List<RecordOffsetInfo> results = [];
+    for (final matchedKey in matchedKeysList) {
+      final keyIndex = _keyList.indexOf(matchedKey);
+      final recordStart = matchedKey.$1;
+      final recordEnd = (keyIndex < _keyList.length - 1)
+          ? _keyList[keyIndex + 1].$1
+          : -1; // -1 indicates the last record
+
+      final actualRecordEnd =
+          (recordEnd == -1) ? totalDecompressedSize : recordEnd;
+
+      // Locate the correct block
+      int accumulatedDecompressedSize = 0;
+      var currentRecordBlockFileOffset = recordBlockFileOffset;
+
+      for (final blockInfo in recordBlockInfoList) {
+        final compressedSize = blockInfo.$1;
+        final decompressedSize = blockInfo.$2;
+
+        if (recordStart < accumulatedDecompressedSize + decompressedSize) {
+          final startOffset = recordStart - accumulatedDecompressedSize;
+          final endOffset = actualRecordEnd - accumulatedDecompressedSize;
+          results.add(RecordOffsetInfo(
+              matchedKey.$2,
+              currentRecordBlockFileOffset,
+              startOffset,
+              endOffset,
+              compressedSize));
+          break;
+        }
+
+        accumulatedDecompressedSize += decompressedSize;
+        currentRecordBlockFileOffset += compressedSize;
+      }
+    }
+
+    return results;
+  }
+
   List<int> _decodeBlock(List<int> block) {
     final byteBuffer =
         ByteData.view(Uint8List.fromList(block).sublist(0, 4).buffer);
