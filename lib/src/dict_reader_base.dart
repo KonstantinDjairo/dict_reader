@@ -95,32 +95,30 @@ class DictReader {
       _f = await _dict!.open();
     }
 
-    final path = _path;
-    final initData = await Isolate.run(() =>
-        _initDictIsolate(path, readKeys, readRecordBlockInfo, readHeader));
-
     if (readHeader) {
-      header = initData.header!;
-      _numberWidth = initData.numberWidth!;
-      _keyBlockOffset = initData.keyBlockOffset!;
-      _mdx = initData.mdx!;
-      _version = initData.version!;
-      _encoding = initData.encoding!;
-      _encrypt = initData.encrypt!;
-      if (initData.stylesheet != null) {
-        _stylesheet.addAll(initData.stylesheet!);
-      }
+      header = await _readHeader();
     }
 
     if (readKeys) {
+      final path = _path;
+      final initData = await Isolate.run(() => _initDictIsolate(
+          path,
+          readKeys,
+          readRecordBlockInfo,
+          _keyBlockOffset,
+          _version,
+          _numberWidth,
+          _encrypt,
+          _encoding));
+
       _keyList = initData.keyList!;
       numEntries = initData.numEntries!;
       _recordBlockOffset = initData.recordBlockOffset!;
-    }
 
-    if (readRecordBlockInfo) {
-      _recordBlockInfoList = initData.recordBlockInfoList;
-      _totalDecompressedSize = initData.totalDecompressedSize;
+      if (readRecordBlockInfo) {
+        _recordBlockInfoList = initData.recordBlockInfoList;
+        _totalDecompressedSize = initData.totalDecompressedSize;
+      }
     }
   }
 
@@ -893,16 +891,7 @@ class RecordOffsetInfo {
 }
 
 class _DictInitData {
-  // For _readHeader
-  Map<String, String>? header;
-  int? numberWidth;
-  int? keyBlockOffset;
   int? recordBlockOffset;
-  bool? mdx;
-  double? version;
-  String? encoding;
-  int? encrypt;
-  Map<String, (String, String)>? stylesheet;
 
   // For _readKeys
   List<(int, String)>? keyList;
@@ -915,23 +904,25 @@ class _DictInitData {
   _DictInitData();
 }
 
-Future<_DictInitData> _initDictIsolate(String path, bool readKeys,
-    bool readRecordBlockInfo, bool readHeader) async {
+Future<_DictInitData> _initDictIsolate(
+    String path,
+    bool readKeys,
+    bool readRecordBlockInfo,
+    int keyBlockOffset,
+    double version,
+    int numberWidth,
+    int encrypt,
+    String encoding) async {
   final initData = _DictInitData();
   final reader = DictReader(path);
   reader._dict = File(path);
   reader._f = await reader._dict!.open();
 
-  if (readHeader) {
-    initData.header = await reader._readHeader();
-    initData.numberWidth = reader._numberWidth;
-    initData.keyBlockOffset = reader._keyBlockOffset;
-    initData.mdx = reader._mdx;
-    initData.version = reader._version;
-    initData.encoding = reader._encoding;
-    initData.encrypt = reader._encrypt;
-    initData.stylesheet = reader._stylesheet;
-  }
+  reader._keyBlockOffset = keyBlockOffset;
+  reader._version = version;
+  reader._numberWidth = numberWidth;
+  reader._encrypt = encrypt;
+  reader._encoding = encoding;
 
   if (readKeys) {
     initData.keyList = await reader._readKeys();
