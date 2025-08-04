@@ -52,7 +52,7 @@ class DictReader {
   late bool _mdx;
   late double _version;
   late String _encoding;
-  late File _dict;
+  File? _dict;
   late List<(int, String)> _keyList;
   late int _encrypt;
   RandomAccessFile? _f;
@@ -69,12 +69,40 @@ class DictReader {
   /// Initialize
   ///
   /// Will not read key if [readKey] is false to reduce initialization time.
+  @Deprecated("Use initDict instead.")
   Future<void> init([bool readKey = true]) async {
     _dict = File(_path);
-    _f = await _dict.open();
+    _f = await _dict!.open();
     header = await _readHeader();
     if (readKey) {
       _keyList = await _readKeys();
+      await _readRecordBlockInfo();
+    }
+  }
+
+  /// Initializes the dictionary.
+  ///
+  /// [readKeys] determines whether to read the key list.
+  /// [readRecordBlockInfo] determines whether to read the record block information.
+  /// [readHeader] determines whether to read the dictionary header.
+  Future<void> initDict(
+      {bool readKeys = true,
+      bool readRecordBlockInfo = true,
+      bool readHeader = true}) async {
+    if (_dict == null) {
+      _dict = File(_path);
+      _f = await _dict!.open();
+    }
+
+    if (readHeader) {
+      header = await _readHeader();
+    }
+
+    if (readKeys) {
+      _keyList = await _readKeys();
+    }
+
+    if (readRecordBlockInfo) {
       await _readRecordBlockInfo();
     }
   }
@@ -96,7 +124,7 @@ class DictReader {
   /// Returns `Stream<(String, List<int>)` when file format is mdd.
   ///
   /// The first member of the returned record is the key text.
-  @Deprecated("")
+  @Deprecated("Use readWithMdxData and readWithMddData instead.")
   Stream<(String, dynamic)> read([bool returnData = false]) async* {
     final f = _f!;
     await f.setPosition(_recordBlockOffset);
