@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
+## [1.5.1](https://github.com/mumu-lhl/dict_reader/compare/v1.5.0..v1.5.1) - 2025-08-04
+
+### Features
+
+- Improve performance - ([9d43460c](https://github.com/mumu-lhl/dict_reader/commit/9d43460c)) - Mumulhl
+
+### Documentation
+
+- Update examples - ([95ed671e](https://github.com/mumu-lhl/dict_reader/commit/95ed671e)) - Mumulhl
+
+---
 ## [1.5.0](https://github.com/mumu-lhl/dict_reader/compare/v1.4.1..v1.5.0) - 2025-08-04
 
 ### Features
