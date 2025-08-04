@@ -6,6 +6,7 @@ import "dart:typed_data";
 import "package:blockchain_utils/crypto/crypto/hash/hash.dart";
 import "package:charset/charset.dart";
 import "package:collection/collection.dart";
+import "package:html_unescape/html_unescape.dart";
 
 Uint8List _fastDecrypt(Uint8List data, Uint8List key) {
   // XOR decryption
@@ -585,9 +586,11 @@ class DictReader {
     // {'number' : ('style_begin', 'style_end')}
     final stylesheetString = tags["StyleSheet"];
     if (stylesheetString != null) {
+      final unescape = HtmlUnescape();
       final lines = LineSplitter().convert(stylesheetString);
       for (int i = 0; i < lines.length; i += 3) {
-        _stylesheet[lines[i]] = (lines[i + 1], lines[i + 2]);
+        _stylesheet[lines[i]] =
+            (unescape.convert(lines[i + 1]), unescape.convert(lines[i + 2]));
       }
     }
 
@@ -800,25 +803,27 @@ class DictReader {
   }
 
   String _substituteStylesheet(String txt) {
-    // substitute stylesheet definition
-    RegExp regExp = RegExp(r'`\d+`');
-    List<String> txtList = txt.split(regExp);
-    Iterable<Match> matches = regExp.allMatches(txt);
-    List<String> txtTags = matches.map((match) => match.group(0)!).toList();
+    final regExp = RegExp(r'`\d+`');
+    final txtList = txt.split(regExp);
+    final txtTags = regExp.allMatches(txt).map((m) => m.group(0)!).toList();
     var txtStyled = txtList[0];
 
-    for (var i = 0; i < txtList.length - 1; i++) {
-      final p = txtList.sublist(1)[i];
-      final txtTag = txtTags[i];
-      final style = _stylesheet[txtTag.substring(1, txtTag.length - 1)];
+    for (var j = 0; j < txtTags.length; j++) {
+      final p = txtList[j + 1];
+      final txtTag = txtTags[j];
+      final styleKey = txtTag.substring(1, txtTag.length - 1);
+      final style = _stylesheet[styleKey];
 
-      if (p != "" && p[p.length - 1] == "\n") {
-        txtStyled = "$txtStyled${style!.$1}${p.trimRight()}${style.$1}\r\n";
+      if (style != null) {
+        if (p.isNotEmpty && p.endsWith('\n')) {
+          txtStyled = "$txtStyled${style.$1}${p.trimRight()}${style.$2}\r\n";
+        } else {
+          txtStyled = "$txtStyled${style.$1}$p${style.$2}";
+        }
       } else {
-        txtStyled = "$txtStyled${style!.$1}$p${style.$1}";
+        txtStyled = "$txtStyled$txtTag$p";
       }
     }
-
     return txtStyled;
   }
 
