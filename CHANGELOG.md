@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
+## [1.6.0](https://github.com/mumu-lhl/dict_reader/compare/v1.5.1..v1.6.0) - 2025-08-04
+
+### Features
+
+- Add initDict() - ([8f0e1da8](https://github.com/mumu-lhl/dict_reader/commit/8f0e1da8)) - Mumulhl
+
+### Bug Fixes
+
+- Fix style sheet - ([4291f7b8](https://github.com/mumu-lhl/dict_reader/commit/4291f7b8)) - Mumulhl
+
+### Refactoring
+
+- Make initialization isolate - ([9d1c67f1](https://github.com/mumu-lhl/dict_reader/commit/9d1c67f1)) - Mumulhl
+
+### Documentation
+
+- Update examples - ([e5f3e887](https://github.com/mumu-lhl/dict_reader/commit/e5f3e887)) - Mumulhl
+
+---
 ## [1.5.1](https://github.com/mumu-lhl/dict_reader/compare/v1.5.0..v1.5.1) - 2025-08-04
 
 ### Features
