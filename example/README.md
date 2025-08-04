@@ -2,6 +2,54 @@
 
 English | [中文](./README_CN.md)
 
+## Locate
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final offsetInfo = await dictReader.locate("go");
+  print(await dictReader.readOneMdx(offsetInfo!));
+}
+```
+
+## Search
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final keys = dictReader.search("go");
+  print(keys);
+
+  final keysWithLimit = dictReader.search("go", limit: 1);
+  print(keysWithLimit);
+}
+```
+
+## Exist
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final keyExists = dictReader.exist("go");
+  print(keyExists);
+
+  final keyDoesNotExist = dictReader.exist("non-existent-key");
+  print(keyDoesNotExist);
+}
+```
+
 ## Read Data Directly
 
 ```dart
@@ -52,36 +100,5 @@ void main() async {
 
   final offsetInfo = map["go"];
   print(await dictReader.readOneMdx(offsetInfo!));
-}
-```
-
-## Locate
-
-```dart
-import 'package:dict_reader/dict_reader.dart';
-
-void main() async {
-  final dictReader = DictReader("MDX FILE PATH");
-  await dictReader.init();
-
-  final offsetInfo = await dictReader.locate("go");
-  print(await dictReader.readOneMdx(offsetInfo!));
-}
-```
-
-## Search
-
-```dart
-import 'package:dict_reader/dict_reader.dart';
-
-void main() async {
-  final dictReader = DictReader("MDX FILE PATH");
-  await dictReader.init();
-
-  final keys = dictReader.search("go");
-  print(keys);
-
-  final keysWithLimit = dictReader.search("go", limit: 1);
-  print(keysWithLimit);
 }
 ```

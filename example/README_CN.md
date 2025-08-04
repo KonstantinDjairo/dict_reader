@@ -2,6 +2,54 @@
 
 [English](./README.md) | 中文
 
+## 定位
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final offsetInfo = await dictReader.locate("go");
+  print(await dictReader.readOneMdx(offsetInfo!));
+}
+```
+
+## 搜索
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final keys = dictReader.search("go");
+  print(keys);
+
+  final keysWithLimit = dictReader.search("go", limit: 1);
+  print(keysWithLimit);
+}
+```
+
+## 是否存在
+
+```dart
+import 'package:dict_reader/dict_reader.dart';
+
+void main() async {
+  final dictReader = DictReader("MDX FILE PATH");
+  await dictReader.init();
+
+  final keyExists = dictReader.exist("go");
+  print(keyExists);
+
+  final keyDoesNotExist = dictReader.exist("non-existent-key");
+  print(keyDoesNotExist);
+}
+```
+
 ## 直接读取数据
 
 ```dart
@@ -52,36 +100,5 @@ void main() async {
 
   final offsetInfo = map["go"];
   print(await dictReader.readOneMdx(offsetInfo!));
-}
-```
-
-## 定位
-
-```dart
-import 'package:dict_reader/dict_reader.dart';
-
-void main() async {
-  final dictReader = DictReader("MDX FILE PATH");
-  await dictReader.init();
-
-  final offsetInfo = await dictReader.locate("go");
-  print(await dictReader.readOneMdx(offsetInfo!));
-}
-```
-
-## 搜索
-
-```dart
-import 'package:dict_reader/dict_reader.dart';
-
-void main() async {
-  final dictReader = DictReader("MDX FILE PATH");
-  await dictReader.init();
-
-  final keys = dictReader.search("go");
-  print(keys);
-
-  final keysWithLimit = dictReader.search("go", limit: 1);
-  print(keysWithLimit);
 }
 ```
