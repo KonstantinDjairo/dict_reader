@@ -1,5 +1,6 @@
 import "dart:convert";
 import "dart:io";
+import "dart:isolate";
 import "dart:typed_data";
 
 import "package:blockchain_utils/crypto/crypto/hash/hash.dart";
@@ -94,16 +95,33 @@ class DictReader {
       _f = await _dict!.open();
     }
 
+    final path = _path;
+    final initData = await Isolate.run(() =>
+        _initDictIsolate(path, readKeys, readRecordBlockInfo, readHeader));
+
     if (readHeader) {
-      header = await _readHeader();
+      header = initData.header!;
+      _numberWidth = initData.numberWidth!;
+      _keyBlockOffset = initData.keyBlockOffset!;
+      _recordBlockOffset = initData.recordBlockOffset!;
+      _mdx = initData.mdx!;
+      _version = initData.version!;
+      _encoding = initData.encoding!;
+      _encrypt = initData.encrypt!;
+      if (initData.stylesheet != null) {
+        _stylesheet.addAll(initData.stylesheet!);
+      }
     }
 
     if (readKeys) {
-      _keyList = await _readKeys();
+      _keyList = initData.keyList!;
+      numEntries = initData.numEntries!;
+      _recordBlockOffset = initData.recordBlockOffset!;
     }
 
     if (readRecordBlockInfo) {
-      await _readRecordBlockInfo();
+      _recordBlockInfoList = initData.recordBlockInfoList;
+      _totalDecompressedSize = initData.totalDecompressedSize;
     }
   }
 
@@ -873,4 +891,60 @@ class RecordOffsetInfo {
   /// Creates a new [RecordOffsetInfo] instance.
   const RecordOffsetInfo(this.keyText, this.recordBlockOffset, this.startOffset,
       this.endOffset, this.compressedSize);
+}
+
+class _DictInitData {
+  // For _readHeader
+  Map<String, String>? header;
+  int? numberWidth;
+  int? keyBlockOffset;
+  int? recordBlockOffset;
+  bool? mdx;
+  double? version;
+  String? encoding;
+  int? encrypt;
+  Map<String, (String, String)>? stylesheet;
+
+  // For _readKeys
+  List<(int, String)>? keyList;
+  int? numEntries;
+
+  // For _readRecordBlockInfo
+  List<(int, int)>? recordBlockInfoList;
+  int? totalDecompressedSize;
+
+  _DictInitData();
+}
+
+Future<_DictInitData> _initDictIsolate(String path, bool readKeys,
+    bool readRecordBlockInfo, bool readHeader) async {
+  final initData = _DictInitData();
+  final reader = DictReader(path);
+  reader._dict = File(path);
+  reader._f = await reader._dict!.open();
+
+  if (readHeader) {
+    initData.header = await reader._readHeader();
+    initData.numberWidth = reader._numberWidth;
+    initData.keyBlockOffset = reader._keyBlockOffset;
+    initData.mdx = reader._mdx;
+    initData.version = reader._version;
+    initData.encoding = reader._encoding;
+    initData.encrypt = reader._encrypt;
+    initData.stylesheet = reader._stylesheet;
+  }
+
+  if (readKeys) {
+    initData.keyList = await reader._readKeys();
+    initData.numEntries = reader.numEntries;
+    initData.recordBlockOffset = reader._recordBlockOffset;
+    if (readRecordBlockInfo) {
+      await reader._readRecordBlockInfo();
+      initData.recordBlockInfoList = reader._recordBlockInfoList;
+      initData.totalDecompressedSize = reader._totalDecompressedSize;
+    }
+  }
+
+  await reader.close();
+  return initData;
 }
