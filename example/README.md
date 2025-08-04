@@ -13,6 +13,8 @@ void main() async {
 
   final offsetInfo = await dictReader.locate("go");
   print(await dictReader.readOneMdx(offsetInfo!));
+
+  await dictReader.close();
 }
 ```
 
@@ -30,6 +32,8 @@ void main() async {
 
   final keysWithLimit = dictReader.search("go", limit: 1);
   print(keysWithLimit);
+
+  await dictReader.close();
 }
 ```
 
@@ -47,6 +51,8 @@ void main() async {
 
   final keyDoesNotExist = dictReader.exist("non-existent-key");
   print(keyDoesNotExist);
+
+  await dictReader.close();
 }
 ```
 
@@ -62,6 +68,8 @@ void main() async {
   await for (final MdxRecord(:keyText, :data) in dictReader.readWithMdxData()) {
     print("$keyText, $data");
   }
+
+  await dictReader.close();
 }
 ```
 
@@ -81,6 +89,8 @@ void main() async {
 
   final offsetInfo = map["go"];
   print(await dictReader.readOneMdx(offsetInfo!));
+
+  await dictReader.close();
 }
 ```
 
@@ -100,5 +110,7 @@ void main() async {
 
   final offsetInfo = map["go"];
   print(await dictReader.readOneMdx(offsetInfo!));
+
+  await dictReader.close();
 }
 ```
