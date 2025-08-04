@@ -344,6 +344,15 @@ class DictReader {
     return _collectMatches(_keyList, key, firstMatchIndex, limit);
   }
 
+  /// Checks if a key (word) exists in the dictionary.
+  ///
+  /// Returns `true` if the key is found, otherwise `false`.
+  bool exist(String key) {
+    final keyIndex = binarySearch(_keyList, (0, key),
+        compare: (a, b) => a.$2.compareTo(b.$2));
+    return keyIndex >= 0;
+  }
+
   /// Collects all matching keys starting from a given index.
   List<String> _collectMatches(
       List<(int, String)> list, String key, int startIndex, int? limit) {
