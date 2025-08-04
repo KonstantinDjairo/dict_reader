@@ -101,15 +101,20 @@ class DictReader {
 
     if (readKeys) {
       final path = _path;
+      final keyBlockOffset = _keyBlockOffset;
+      final version = _version;
+      final numberWidth = _numberWidth;
+      final encrypt = _encrypt;
+      final encoding = _encoding;
       final initData = await Isolate.run(() => _initDictIsolate(
           path,
           readKeys,
           readRecordBlockInfo,
-          _keyBlockOffset,
-          _version,
-          _numberWidth,
-          _encrypt,
-          _encoding));
+          keyBlockOffset,
+          version,
+          numberWidth,
+          encrypt,
+          encoding));
 
       _keyList = initData.keyList!;
       numEntries = initData.numEntries!;
