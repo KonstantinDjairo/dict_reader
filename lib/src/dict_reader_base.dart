@@ -103,7 +103,6 @@ class DictReader {
       header = initData.header!;
       _numberWidth = initData.numberWidth!;
       _keyBlockOffset = initData.keyBlockOffset!;
-      _recordBlockOffset = initData.recordBlockOffset!;
       _mdx = initData.mdx!;
       _version = initData.version!;
       _encoding = initData.encoding!;
