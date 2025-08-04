@@ -55,6 +55,9 @@ class DictReader {
   late File _dict;
   late List<(int, String)> _keyList;
   late int _encrypt;
+  RandomAccessFile? _f;
+  List<(int, int)>? _recordBlockInfoList;
+  int? _totalDecompressedSize;
 
   late Map<String, String> header;
 
@@ -68,8 +71,18 @@ class DictReader {
   /// Will not read key if [readKey] is false to reduce initialization time.
   Future<void> init([bool readKey = true]) async {
     _dict = File(_path);
+    _f = await _dict.open();
     header = await _readHeader();
-    if (readKey) _keyList = await _readKeys();
+    if (readKey) {
+      _keyList = await _readKeys();
+      await _readRecordBlockInfo();
+    }
+  }
+
+  /// Closes the dictionary file.
+  Future<void> close() async {
+    await _f?.close();
+    _f = null;
   }
 
   /// Reads records
@@ -85,7 +98,7 @@ class DictReader {
   /// The first member of the returned record is the key text.
   @Deprecated("")
   Stream<(String, dynamic)> read([bool returnData = false]) async* {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(_recordBlockOffset);
 
     final numRecordBlocks = await _readNumberer(f);
@@ -155,8 +168,6 @@ class DictReader {
       offset += recordBlock.length;
       recordBlockOffset += compressedSize;
     }
-
-    await f.close();
   }
 
   /// Only reads one record.
@@ -167,14 +178,12 @@ class DictReader {
   @Deprecated("Use readOneMdx or readOneMdd instead.")
   dynamic readOne(
       int offset, int startOffset, int endOffset, int compressedSize) async {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(offset);
 
     final recordBlock = _decodeBlock(await f.read(compressedSize));
     final originalData = recordBlock.sublist(startOffset, endOffset);
     final data = _mdx ? _treatRecordMdxData(originalData) : originalData;
-
-    await f.close();
 
     return data;
   }
@@ -184,15 +193,13 @@ class DictReader {
   /// [recordOffsetInfo] is obtained from [readWithOffset].
   /// Returns `List<int>`.
   Future<List<int>> readOneMdd(RecordOffsetInfo recordOffsetInfo) async {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(recordOffsetInfo.recordBlockOffset);
 
     final recordBlock =
         _decodeBlock(await f.read(recordOffsetInfo.compressedSize));
     final data = recordBlock.sublist(
         recordOffsetInfo.startOffset, recordOffsetInfo.endOffset);
-
-    await f.close();
 
     return data;
   }
@@ -203,15 +210,13 @@ class DictReader {
   /// Returns `String` if file format is mdx.
   /// Returns `List<int>` if file format is mdd.
   Future<String> readOneMdx(RecordOffsetInfo recordOffsetInfo) async {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(recordOffsetInfo.recordBlockOffset);
 
     final recordBlock =
         _decodeBlock(await f.read(recordOffsetInfo.compressedSize));
     final data = _treatRecordMdxData(recordBlock.sublist(
         recordOffsetInfo.startOffset, recordOffsetInfo.endOffset));
-
-    await f.close();
 
     return data;
   }
@@ -267,39 +272,26 @@ class DictReader {
         ? _keyList[keyIndex + 1].$1
         : -1; // -1 indicates the last record
 
-    RandomAccessFile f = await _dict.open();
-    await f.setPosition(_recordBlockOffset);
-
-    final numRecordBlocks = await _readNumberer(f);
-    await _readNumberer(f); // number of entries
-    await _readNumberer(f); // size of record block info
-    await _readNumberer(f); // size of record block
-
-    // Read record block info section
-    final List<(int, int)> recordBlockInfoList = [];
-    int totalDecompressedSize = 0;
-    for (var i = 0; i < numRecordBlocks; i++) {
-      final compressedSize = await _readNumberer(f);
-      final decompressedSize = await _readNumberer(f);
-      recordBlockInfoList.add((compressedSize, decompressedSize));
-      totalDecompressedSize += decompressedSize;
-    }
-
     final actualRecordEnd =
-        (recordEnd == -1) ? totalDecompressedSize : recordEnd;
+        (recordEnd == -1) ? _totalDecompressedSize! : recordEnd;
 
     // Locate the correct block
     int accumulatedDecompressedSize = 0;
-    var recordBlockFileOffset = await f.position();
+    // The file offset of the first record block.
+    var recordBlockFileOffset = _recordBlockOffset + _numberWidth * 4;
+    if (_version >= 2.0) {
+      recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth * 2;
+    } else {
+      recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth;
+    }
 
-    for (final blockInfo in recordBlockInfoList) {
+    for (final blockInfo in _recordBlockInfoList!) {
       final compressedSize = blockInfo.$1;
       final decompressedSize = blockInfo.$2;
 
       if (recordStart < accumulatedDecompressedSize + decompressedSize) {
         final startOffset = recordStart - accumulatedDecompressedSize;
         final endOffset = actualRecordEnd - accumulatedDecompressedSize;
-        await f.close();
         return RecordOffsetInfo(
             key, recordBlockFileOffset, startOffset, endOffset, compressedSize);
       }
@@ -308,7 +300,6 @@ class DictReader {
       recordBlockFileOffset += compressedSize;
     }
 
-    await f.close();
     return null; // Should not happen if key is in _keyList
   }
 
@@ -494,14 +485,12 @@ class DictReader {
   }
 
   Future<Map<String, String>> _readHeader() async {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     var headerBytesSize = await _readNumberer(f, 4);
 
     var contentBytes = await f.read(headerBytesSize);
     String content;
     _keyBlockOffset = headerBytesSize + 8;
-
-    await f.close();
 
     if (contentBytes[contentBytes.length - 1] == 0 &&
         contentBytes[contentBytes.length - 2] == 0) {
@@ -572,7 +561,7 @@ class DictReader {
   }
 
   Future<List<(int, String)>> _readKeys() async {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(_keyBlockOffset);
 
     // number of key blocks
@@ -606,8 +595,6 @@ class DictReader {
 
     _recordBlockOffset = await f.position();
 
-    await f.close();
-
     return keyList;
   }
 
@@ -622,11 +609,31 @@ class DictReader {
     }
   }
 
+  Future<void> _readRecordBlockInfo() async {
+    final f = _f!;
+    await f.setPosition(_recordBlockOffset);
+
+    final numRecordBlocks = await _readNumberer(f);
+    await _readNumberer(f); // number of entries
+    await _readNumberer(f); // size of record block info
+    await _readNumberer(f); // size of record block
+
+    // Read record block info section
+    _recordBlockInfoList = [];
+    _totalDecompressedSize = 0;
+    for (var i = 0; i < numRecordBlocks; i++) {
+      final compressedSize = await _readNumberer(f);
+      final decompressedSize = await _readNumberer(f);
+      _recordBlockInfoList!.add((compressedSize, decompressedSize));
+      _totalDecompressedSize = _totalDecompressedSize! + decompressedSize;
+    }
+  }
+
   Stream<T> _readRecords<T>(
       T Function(String keyText, List<int> originalData, int recordBlockOffset,
               int startOffset, int endOffset, int compressedSize)
           recordProcessor) async* {
-    RandomAccessFile f = await _dict.open();
+    final f = _f!;
     await f.setPosition(_recordBlockOffset);
 
     final numRecordBlocks = await _readNumberer(f);
@@ -688,8 +695,6 @@ class DictReader {
       offset += recordBlock.length;
       recordBlockOffset += compressedSize;
     }
-
-    await f.close();
   }
 
   List<(int, String)> _splitKeyBlock(List<int> keyBlock) {
