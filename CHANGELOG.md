@@ -3,7 +3,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 ---
-## [1.4.0](https://github.com/mumu-lhl/dict_reader/compare/v1.4.0..v1.4.1) - 2025-08-03
+## [1.5.0](https://github.com/mumu-lhl/dict_reader/compare/v1.4.1..v1.5.0) - 2025-08-04
+
+### Features
+
+- Add exist() - ([23cca8c](https://github.com/mumu-lhl/dict_reader/commit/23cca8cc)) - Mumulhl
+
+### Documentation
+
+- Update examples - ([737cdfd5](https://github.com/mumu-lhl/dict_reader/commit/737cdfd5)) - Mumulhl
+
+---
+## [1.4.1](https://github.com/mumu-lhl/dict_reader/compare/v1.4.0..v1.4.1) - 2025-08-03
 
 ### Bug Fixes
 
