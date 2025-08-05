@@ -193,12 +193,12 @@ class DictReader {
   }
 
   /// Sets a callback function to be called after the header is read.
-  void setOnHeaderRead(Future<void> Function() callback) {
+  void setOnHeaderRead(void Function() callback) {
     _onHeaderRead = callback;
   }
 
   /// Sets a callback function to be called after the record block info is read.
-  void setOnRecordBlockInfoRead(Future<void> Function() callback) {
+  void setOnRecordBlockInfoRead(void Function() callback) {
     _onRecordBlockInfoRead = callback;
   }
 
