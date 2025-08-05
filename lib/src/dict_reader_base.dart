@@ -63,9 +63,9 @@ class DictReader {
 
   late Map<String, String> header;
 
-  void Function()? _onHeaderRead;
-  void Function()? _onKeysRead;
-  void Function()? _onRecordBlockInfoRead;
+  Future<void> Function()? _onHeaderRead;
+  Future<void> Function()? _onKeysRead;
+  Future<void> Function()? _onRecordBlockInfoRead;
 
   /// [_path] File path
   DictReader(this._path) {
@@ -190,17 +190,17 @@ class DictReader {
   }
 
   /// Sets a callback function to be called after the header is read.
-  void setOnHeaderRead(void Function() callback) {
+  void setOnHeaderRead(Future<void> Function() callback) {
     _onHeaderRead = callback;
   }
 
   /// Sets a callback function to be called after the keys are read.
-  void setOnKeysRead(void Function() callback) {
+  void setOnKeysRead(Future<void> Function() callback) {
     _onKeysRead = callback;
   }
 
   /// Sets a callback function to be called after the record block info is read.
-  void setOnRecordBlockInfoRead(void Function() callback) {
+  void setOnRecordBlockInfoRead(Future<void> Function() callback) {
     _onRecordBlockInfoRead = callback;
   }
 
@@ -670,7 +670,7 @@ class DictReader {
     }
 
     if (_onHeaderRead != null) {
-      _onHeaderRead!();
+      await _onHeaderRead!();
     }
 
     return tags;
@@ -714,7 +714,7 @@ class DictReader {
     _recordBlockOffset = await f.position();
 
     if (_onKeysRead != null) {
-      _onKeysRead!();
+      await _onKeysRead!();
     }
 
     return keyList;
@@ -751,7 +751,7 @@ class DictReader {
     }
 
     if (_onRecordBlockInfoRead != null) {
-      _onRecordBlockInfoRead!();
+      await _onRecordBlockInfoRead!();
     }
   }
 
