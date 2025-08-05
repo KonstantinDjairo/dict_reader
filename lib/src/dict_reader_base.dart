@@ -417,21 +417,9 @@ class DictReader {
   /// This method can be used to get the content of a key after initialization.
   /// Returns an empty list if the key is not found.
   List<String> search(String key, {int? limit}) {
-    // Use binary search to find the first potential match.
-    final startIndex = binarySearch(_keyList, (0, key),
-        compare: (a, b) => a.$2.compareTo(b.$2));
-
-    if (startIndex < 0) {
-      return [];
-    }
-
-    // binarySearch might land in the middle of a range of matches.
-    // We need to find the first actual match.
-    var firstMatchIndex = startIndex;
-    while (firstMatchIndex > 0 &&
-        _keyList[firstMatchIndex - 1].$2.startsWith(key)) {
-      firstMatchIndex--;
-    }
+    // Use lowerBound to find the first potential match.
+    final firstMatchIndex =
+        lowerBound(_keyList, (0, key), compare: (a, b) => a.$2.compareTo(b.$2));
 
     return _collectMatches(_keyList, key, firstMatchIndex, limit);
   }
