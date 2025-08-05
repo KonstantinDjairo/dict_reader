@@ -412,6 +412,60 @@ class DictReader {
     return null; // Should not happen if key is in _keyList
   }
 
+  /// Locates the position information of all occurrences of a key (word).
+  ///
+  /// This method can be used to get the content of a key after initialization.
+  /// Returns an empty list if the key is not found.
+  Future<List<RecordOffsetInfo>> locateAll(String key) async {
+    final results = <RecordOffsetInfo>[];
+    // Use lowerBound to find the first potential match.
+    var keyIndex =
+        lowerBound(_keyList, (0, key), compare: (a, b) => a.$2.compareTo(b.$2));
+
+    if (keyIndex == _keyList.length || _keyList[keyIndex].$2 != key) {
+      return [];
+    }
+
+    // Iterate through all keys that match
+    while (keyIndex < _keyList.length && _keyList[keyIndex].$2 == key) {
+      final recordStart = _keyList[keyIndex].$1;
+      final recordEnd = (keyIndex < _keyList.length - 1)
+          ? _keyList[keyIndex + 1].$1
+          : -1; // -1 indicates the last record
+
+      final actualRecordEnd =
+          (recordEnd == -1) ? _totalDecompressedSize! : recordEnd;
+
+      // Locate the correct block
+      int accumulatedDecompressedSize = 0;
+      // The file offset of the first record block.
+      var recordBlockFileOffset = _recordBlockOffset + _numberWidth * 4;
+      recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth * 2;
+
+      for (final blockInfo in _recordBlockInfoList!) {
+        final compressedSize = blockInfo.$1;
+        final decompressedSize = blockInfo.$2;
+
+        if (recordStart < accumulatedDecompressedSize + decompressedSize) {
+          final startOffset = recordStart - accumulatedDecompressedSize;
+          var endOffset = actualRecordEnd - accumulatedDecompressedSize;
+          if (endOffset > decompressedSize) {
+            endOffset = decompressedSize;
+          }
+          results.add(RecordOffsetInfo(key, recordBlockFileOffset, startOffset,
+              endOffset, compressedSize));
+          break; // Found the block for this key, move to the next key
+        }
+
+        accumulatedDecompressedSize += decompressedSize;
+        recordBlockFileOffset += compressedSize;
+      }
+      keyIndex++;
+    }
+
+    return results;
+  }
+
   /// Searches for keys containing the given text.
   ///
   /// This method can be used to get the content of a key after initialization.
