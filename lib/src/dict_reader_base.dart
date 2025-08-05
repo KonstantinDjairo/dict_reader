@@ -336,7 +336,10 @@ class DictReader {
 
       if (recordStart < accumulatedDecompressedSize + decompressedSize) {
         final startOffset = recordStart - accumulatedDecompressedSize;
-        final endOffset = actualRecordEnd - accumulatedDecompressedSize;
+        var endOffset = actualRecordEnd - accumulatedDecompressedSize;
+        if (endOffset > decompressedSize) {
+          endOffset = decompressedSize;
+        }
         return RecordOffsetInfo(
             key, recordBlockFileOffset, startOffset, endOffset, compressedSize);
       }
