@@ -328,11 +328,7 @@ class DictReader {
     int accumulatedDecompressedSize = 0;
     // The file offset of the first record block.
     var recordBlockFileOffset = _recordBlockOffset + _numberWidth * 4;
-    if (_version >= 2.0) {
-      recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth * 2;
-    } else {
-      recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth;
-    }
+    recordBlockFileOffset += _recordBlockInfoList!.length * _numberWidth * 2;
 
     for (final blockInfo in _recordBlockInfoList!) {
       final compressedSize = blockInfo.$1;
