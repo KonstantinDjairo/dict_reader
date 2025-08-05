@@ -63,9 +63,8 @@ class DictReader {
 
   late Map<String, String> header;
 
-  Future<void> Function()? _onHeaderRead;
-  Future<void> Function()? _onKeysRead;
-  Future<void> Function()? _onRecordBlockInfoRead;
+  void Function()? _onHeaderRead;
+  void Function()? _onRecordBlockInfoRead;
 
   /// [_path] File path
   DictReader(this._path) {
@@ -128,6 +127,10 @@ class DictReader {
       if (readRecordBlockInfo) {
         _recordBlockInfoList = initData.recordBlockInfoList;
         _totalDecompressedSize = initData.totalDecompressedSize;
+
+        if (_onRecordBlockInfoRead != null) {
+          _onRecordBlockInfoRead!();
+        }
       }
     }
   }
@@ -192,11 +195,6 @@ class DictReader {
   /// Sets a callback function to be called after the header is read.
   void setOnHeaderRead(Future<void> Function() callback) {
     _onHeaderRead = callback;
-  }
-
-  /// Sets a callback function to be called after the keys are read.
-  void setOnKeysRead(Future<void> Function() callback) {
-    _onKeysRead = callback;
   }
 
   /// Sets a callback function to be called after the record block info is read.
@@ -670,7 +668,7 @@ class DictReader {
     }
 
     if (_onHeaderRead != null) {
-      await _onHeaderRead!();
+      _onHeaderRead!();
     }
 
     return tags;
@@ -713,10 +711,6 @@ class DictReader {
 
     _recordBlockOffset = await f.position();
 
-    if (_onKeysRead != null) {
-      await _onKeysRead!();
-    }
-
     return keyList;
   }
 
@@ -748,10 +742,6 @@ class DictReader {
       final decompressedSize = await _readNumberer(f);
       _recordBlockInfoList!.add((compressedSize, decompressedSize));
       _totalDecompressedSize = _totalDecompressedSize! + decompressedSize;
-    }
-
-    if (_onRecordBlockInfoRead != null) {
-      await _onRecordBlockInfoRead!();
     }
   }
 
