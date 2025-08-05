@@ -354,16 +354,8 @@ class DictReader {
   /// Returns an empty list if the key is not found.
   List<String> search(String key, {int? limit}) {
     // Use binary search to find the first potential match.
-    final startIndex = binarySearch(_keyList, (0, key), compare: (a, b) {
-      final comparedResult = a.$2.compareTo(b.$2);
-      if (comparedResult == 0) {
-        return 0;
-      } else if (a.$2.startsWith(key)) {
-        return 0;
-      } else {
-        return comparedResult;
-      }
-    });
+    final startIndex = binarySearch(_keyList, (0, key),
+        compare: (a, b) => a.$2.compareTo(b.$2));
 
     if (startIndex < 0) {
       return [];
@@ -639,6 +631,8 @@ class DictReader {
 
     // extract key block
     final keyList = _decodeKeyBlock(keyBlockCompressed, keyBlockInfoList);
+
+    keyList.sort((a, b) => a.$2.compareTo(b.$2));
 
     _recordBlockOffset = await f.position();
 
