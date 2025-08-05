@@ -632,7 +632,7 @@ class DictReader {
     // extract key block
     final keyList = _decodeKeyBlock(keyBlockCompressed, keyBlockInfoList);
 
-    keyList.sort((a, b) => a.$2.compareTo(b.$2));
+    mergeSort(keyList, compare: (a, b) => a.$2.compareTo(b.$2));
 
     _recordBlockOffset = await f.position();
 
