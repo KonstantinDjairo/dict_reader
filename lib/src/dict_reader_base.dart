@@ -63,6 +63,10 @@ class DictReader {
 
   late Map<String, String> header;
 
+  void Function()? _onHeaderRead;
+  void Function()? _onKeysRead;
+  void Function()? _onRecordBlockInfoRead;
+
   /// [_path] File path
   DictReader(this._path) {
     _mdx = _path.substring(_path.lastIndexOf(".")) == ".mdx";
@@ -183,6 +187,21 @@ class DictReader {
   /// [importCache] with the resulting map.
   void importCacheFromString(String cacheString) {
     importCache(jsonDecode(cacheString));
+  }
+
+  /// Sets a callback function to be called after the header is read.
+  void setOnHeaderRead(void Function() callback) {
+    _onHeaderRead = callback;
+  }
+
+  /// Sets a callback function to be called after the keys are read.
+  void setOnKeysRead(void Function() callback) {
+    _onKeysRead = callback;
+  }
+
+  /// Sets a callback function to be called after the record block info is read.
+  void setOnRecordBlockInfoRead(void Function() callback) {
+    _onRecordBlockInfoRead = callback;
   }
 
   /// Reads records
@@ -650,6 +669,10 @@ class DictReader {
       }
     }
 
+    if (_onHeaderRead != null) {
+      _onHeaderRead!();
+    }
+
     return tags;
   }
 
@@ -690,6 +713,10 @@ class DictReader {
 
     _recordBlockOffset = await f.position();
 
+    if (_onKeysRead != null) {
+      _onKeysRead!();
+    }
+
     return keyList;
   }
 
@@ -721,6 +748,10 @@ class DictReader {
       final decompressedSize = await _readNumberer(f);
       _recordBlockInfoList!.add((compressedSize, decompressedSize));
       _totalDecompressedSize = _totalDecompressedSize! + decompressedSize;
+    }
+
+    if (_onRecordBlockInfoRead != null) {
+      _onRecordBlockInfoRead!();
     }
   }
 
