@@ -134,6 +134,57 @@ class DictReader {
     _f = null;
   }
 
+  /// Exports the cache data as a map.
+  ///
+  /// This method extracts the key list, number of entries, record block offset,
+  /// record block info list, and total decompressed size into a map, which can
+  /// be used for caching.
+  Map<String, dynamic> exportCache() {
+    return {
+      'keyList': _keyList.map((e) => {'item1': e.$1, 'item2': e.$2}).toList(),
+      'numEntries': numEntries,
+      'recordBlockOffset': _recordBlockOffset,
+      'recordBlockInfoList': _recordBlockInfoList
+          ?.map((e) => {'item1': e.$1, 'item2': e.$2})
+          .toList(),
+      'totalDecompressedSize': _totalDecompressedSize,
+    };
+  }
+
+  /// Exports the cache data as a JSON string.
+  ///
+  /// This is a convenience method that calls [exportCache] and returns the
+  /// result as a JSON-encoded string.
+  String exportCacheAsString() {
+    return jsonEncode(exportCache());
+  }
+
+  /// Imports cache data from a map.
+  ///
+  /// This method populates the dictionary's fields from a cache map, avoiding
+  /// the need to re-read and process the dictionary file.
+  void importCache(Map<String, dynamic> cacheData) {
+    _keyList = (cacheData['keyList'] as List)
+        .map((e) => (e['item1'] as int, e['item2'] as String))
+        .toList();
+    numEntries = cacheData['numEntries'];
+    _recordBlockOffset = cacheData['recordBlockOffset'];
+    if (cacheData['recordBlockInfoList'] != null) {
+      _recordBlockInfoList = (cacheData['recordBlockInfoList'] as List)
+          .map((e) => (e['item1'] as int, e['item2'] as int))
+          .toList();
+    }
+    _totalDecompressedSize = cacheData['totalDecompressedSize'];
+  }
+
+  /// Imports cache data from a JSON string.
+  ///
+  /// This is a convenience method that decodes a JSON string and calls
+  /// [importCache] with the resulting map.
+  void importCacheFromString(String cacheString) {
+    importCache(jsonDecode(cacheString));
+  }
+
   /// Reads records
   ///
   /// If [returnData] is false.
