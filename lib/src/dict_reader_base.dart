@@ -147,8 +147,13 @@ class DictReader {
   /// record block info list, and total decompressed size into a map, which can
   /// be used for caching. This operation is performed in an isolate.
   Future<Map<String, dynamic>> exportCache() {
-    return Isolate.run(() => _exportCacheIsolate(_keyList, numEntries,
-        _recordBlockOffset, _recordBlockInfoList, _totalDecompressedSize));
+    final keyList = _keyList;
+    final numEntries = this.numEntries;
+    final recordBlockOffset = _recordBlockOffset;
+    final recordBlockInfoList = _recordBlockInfoList;
+    final totalDecompressedSize = _totalDecompressedSize;
+    return Isolate.run(() => _exportCacheIsolate(keyList, numEntries,
+        recordBlockOffset, recordBlockInfoList, totalDecompressedSize));
   }
 
   /// Exports the cache data as a JSON string.
@@ -1016,14 +1021,14 @@ class _DictInitData {
 
 Map<String, dynamic> _importCacheIsolate(Map<String, dynamic> cacheData) {
   final keyList = (cacheData['keyList'] as List)
-      .map((e) => (e['item1'] as int, e['item2'] as String))
+      .map((e) => (e[0] as int, e[1] as String))
       .toList();
   final numEntries = cacheData['numEntries'];
   final recordBlockOffset = cacheData['recordBlockOffset'];
   List<(int, int)>? recordBlockInfoList;
   if (cacheData['recordBlockInfoList'] != null) {
     recordBlockInfoList = (cacheData['recordBlockInfoList'] as List)
-        .map((e) => (e['item1'] as int, e['item2'] as int))
+        .map((e) => (e[0] as int, e[1] as int))
         .toList();
   }
   final totalDecompressedSize = cacheData['totalDecompressedSize'];
@@ -1044,12 +1049,11 @@ Map<String, dynamic> _exportCacheIsolate(
     List<(int, int)>? recordBlockInfoList,
     int? totalDecompressedSize) {
   return {
-    'keyList': keyList.map((e) => {'item1': e.$1, 'item2': e.$2}).toList(),
+    'keyList': keyList.map((e) => [e.$1, e.$2]).toList(),
     'numEntries': numEntries,
     'recordBlockOffset': recordBlockOffset,
-    'recordBlockInfoList': recordBlockInfoList
-        ?.map((e) => {'item1': e.$1, 'item2': e.$2})
-        .toList(),
+    'recordBlockInfoList':
+        recordBlockInfoList?.map((e) => [e.$1, e.$2]).toList(),
     'totalDecompressedSize': totalDecompressedSize,
   };
 }
